@@ -791,10 +791,31 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
         if (!addEditSets) {
           mutate();
+          // TikTok Direct Post UX rule: tell the creator that processing
+          // takes a while before the post shows on their profile
+          const tiktokNotice =
+            type !== 'draft' &&
+            posts.some(
+              (p: any) =>
+                integrationById(p.integration.id)?.integration?.identifier ===
+                  'tiktok' && saveTypeOf(p.integration.id) !== 'draft'
+            )
+              ? ' ' +
+                (type === 'now'
+                  ? t(
+                      'tiktok_processing_notice_now',
+                      'TikTok: it may take a few minutes for your post to process and appear on your profile.'
+                    )
+                  : t(
+                      'tiktok_processing_notice_scheduled',
+                      'TikTok: after it is published, it may take a few minutes to process and appear on your profile.'
+                    ))
+              : '';
           toaster.show(
-            !existingData.integration
+            (!existingData.integration
               ? t('added_successfully', 'Added successfully')
-              : t('updated_successfully', 'Updated successfully')
+              : t('updated_successfully', 'Updated successfully')) +
+              tiktokNotice
           );
         }
         if (customClose) {

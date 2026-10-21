@@ -11,6 +11,9 @@ export const Checkbox = forwardRef<
     name?: string;
     className?: string;
     label?: string;
+    // greyed out and locked; `title` explains why on hover
+    disabled?: boolean;
+    title?: string;
     onChange?: (event: {
       target: {
         name?: string;
@@ -20,13 +23,17 @@ export const Checkbox = forwardRef<
     variant?: 'default' | 'hollow';
   }
 >((props, ref: any) => {
-  const { checked, className, label, disableForm, variant } = props;
+  const { checked, className, label, disableForm, variant, disabled, title } =
+    props;
   const form = useFormContext();
   const register = disableForm ? {} : form.register(props.name!);
   const watch = disableForm ? false : form.watch(props.name!);
   const val = watch || checked;
 
   const changeStatus = useCallback(() => {
+    if (disabled) {
+      return;
+    }
     props?.onChange?.({
       target: {
         name: props.name!,
@@ -42,15 +49,20 @@ export const Checkbox = forwardRef<
         },
       });
     }
-  }, [val]);
+  }, [val, disabled]);
   return (
-    <div className="flex gap-[10px]">
+    <div
+      className={clsx('flex gap-[10px]', disabled && 'opacity-50')}
+      title={title}
+      aria-disabled={disabled || undefined}
+    >
       <div
         ref={ref}
         {...disableForm ? {} : form.register(props.name!)}
         onClick={changeStatus}
         className={clsx(
-          'cursor-pointer rounded-[4px] select-none w-[24px] h-[24px] justify-center items-center flex text-white',
+          disabled ? 'cursor-not-allowed' : 'cursor-pointer',
+          'rounded-[4px] select-none w-[24px] h-[24px] justify-center items-center flex text-white',
           variant === 'default' || !variant
             ? 'bg-forth'
             : 'border-customColor1 border-2 bg-customColor2',

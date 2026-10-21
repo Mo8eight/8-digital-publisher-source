@@ -1,8 +1,37 @@
 import {
-  IsBoolean, ValidateIf, IsIn, IsString, MaxLength, IsOptional, IsDefined, IsNumber, Min, Max, ValidateNested
+  IsBoolean, ValidateIf, IsIn, IsString, MaxLength, IsOptional, IsDefined, IsNumber, Min, Max, ValidateNested,
+  Validate, ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JSONSchema } from 'class-validator-jsonschema';
+import {
+  TIKTOK_PRIVACY_LEVELS,
+  TIKTOK_UX_MESSAGES,
+  tiktokDirectPostIssues,
+} from '@gitroom/helpers/utils/tiktok.compliance';
+
+// The Direct Post rules that need no account data (no privacy default,
+// commercial content disclosure, branded content can't be private, video
+// length when the client measured it). The provider re-checks them, plus the
+// creator_info ones, right before posting.
+@ValidatorConstraint({ name: 'tiktokDirectPost', async: false })
+export class TikTokDirectPostRules implements ValidatorConstraintInterface {
+  private issues(args: ValidationArguments) {
+    const settings = args.object as TikTokDto;
+    return tiktokDirectPostIssues(settings, {
+      maxVideoDurationSec: settings.max_video_post_duration_sec,
+    }).filter((p) => p !== 'privacy_required');
+  }
+
+  validate(_: unknown, args: ValidationArguments) {
+    return this.issues(args).length === 0;
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    const [first] = this.issues(args);
+    return first ? TIKTOK_UX_MESSAGES[first] : 'Invalid TikTok settings';
+  }
+}
 
 export class TikTokMusic {
   @IsDefined()
@@ -77,16 +106,17 @@ export class TikTokDto {
   })
   title: string;
 
-  @IsIn([
-    'PUBLIC_TO_EVERYONE',
-    'MUTUAL_FOLLOW_FRIENDS',
-    'FOLLOWER_OF_CREATOR',
-    'SELF_ONLY',
-  ])
-  @IsString()
+  // No default (TikTok UX rule): a DIRECT_POST must carry the privacy level
+  // the creator picked from creator_info's privacy_level_options.
+  @ValidateIf((p) => p.content_posting_method !== 'UPLOAD')
+  @IsIn([...TIKTOK_PRIVACY_LEVELS], {
+    message: 'Choose who can see this post',
+  })
+  @IsString({ message: 'Choose who can see this post' })
+  @Validate(TikTokDirectPostRules)
   @JSONSchema({
     description:
-      'Applied only when content_posting_method=DIRECT_POST. Ignored by TikTok on UPLOAD.',
+      'Required when content_posting_method=DIRECT_POST - there is no default, it must be one of the privacy_level_options returned for the account by the creatorInfo function. Ignored by TikTok on UPLOAD. Branded content (brand_content_toggle) cannot be SELF_ONLY.',
   })
   privacy_level:
     | 'PUBLIC_TO_EVERYONE'
@@ -163,6 +193,34 @@ export class TikTokDto {
       'TikTok Business only, and only when content_posting_method=DIRECT_POST. Tags the post with a location (use the locationSearch function to find one).',
   })
   location?: TikTokLocation;
+
+  @IsBoolean()
+  @IsOptional()
+  @JSONSchema({
+    description:
+      'The commercial content disclosure switch. When true, brand_organic_toggle (your own brand) and/or brand_content_toggle (a third party, "Paid partnership") must be true.',
+  })
+  disclose?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @JSONSchema({
+    description:
+      'Video length in seconds, measured by the client. Checked against max_video_post_duration_sec.',
+  })
+  video_duration_sec?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @JSONSchema({
+    description:
+      'The maximum video length of the account, from the creatorInfo function. The provider re-reads it from TikTok before posting.',
+  })
+  max_video_post_duration_sec?: number;
 
   @IsIn(['DIRECT_POST', 'UPLOAD'])
   @IsString()
