@@ -1,6 +1,6 @@
 # 8 Digital Publisher: source code (AGPL-3.0)
 
-This repository is the complete corresponding source of **8 Digital Publisher**, the content calendar that 8 Digital Marketing Inc. runs at social.8-digitalmarketing.com. It is published to meet the GNU Affero General Public License v3.0, section 13.
+This repository contains the corresponding source for the modified **8 Digital Publisher** build prepared by 8 Digital Marketing Inc., based on Postiz. Publication of source does not mean this patched build has been deployed to social.8-digitalmarketing.com or approved by TikTok. The running production version must be checked separately. It is published under the GNU Affero General Public License v3.0, including its section 13 source-availability requirements.
 
 ## Upstream credit
 8 Digital Publisher is a modified version of **Postiz** by Gitroom (https://github.com/gitroomhq/postiz-app), licensed AGPL-3.0. All upstream copyright and licence notices are kept unchanged; see `LICENSE`. Thank you to the Postiz maintainers and contributors.
